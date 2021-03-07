@@ -1,14 +1,14 @@
-# ZhiDash - 智家面板
+# [https://github.com/Yonsm/ZhiDash](https://github.com/Yonsm/ZhiDash) - 智家面板
 
 Yet Another Dashboard for HomeAssiatant
 
 `ZhiDash` 是为 Home Assistant 开发操作面板，使用 WebSocket API 作为数据通道，基于非常简单的 HTML+JS+CSS 渲染而成的高效、快速的操控面板。可完美替代 `AppDaemon` 的 `HADashboard`。
 
-![dash preview](PREVIEW.png)
+![PREVIEW](https://github.com/Yonsm/ZhiDash/blob/main/PREVIEW.png)
 
 ## 1. 用法
 
-- **使用方法**非常简单，只要把 [dash.html](https://github.com/Yonsm/ZhiDash/blob/main/dash.html) 、[css](https://github.com/Yonsm/ZhiDash/blob/main/css)、[fonts](https://github.com/Yonsm/ZhiDash/blob/main/fonts) 放入 [~/.homeassistant](https://github.com/yonsm/.homeassistant/)/`www` 目录，然后使用 `http://xxx.xxx.xxx:8123/local/dash.html` 访问即可。
+- **使用方法**非常简单，只要把 [dash.html](https://github.com/Yonsm/ZhiDash/blob/main/dash.html) 、[css](https://github.com/Yonsm/ZhiDash/blob/main/css)、[fonts](https://github.com/Yonsm/ZhiDash/blob/main/fonts) 放入 [~/.homeassistant](https://github.com/Yonsm/.homeassistant)/`www` 目录，然后使用 `http://xxx.xxx.xxx:8123/local/dash.html` 访问即可。
 
     - 如果曾经登录过 Home Assistant 并保存过登录会话，访问 `/local/dash.html` 时会自动复用 HA localStorage accessToken 用于 WebSocket 认证。如果没有会提示转到 Home Assistant 主页登录，请选择保存本次登录才会记录 accessToken。
     - **最佳姿势**：在 configuration.yaml 中加入以下配置，可以在侧栏中直接访问；或在 [WallPanel](https://github.com/Yonsm/wallpanel-android) 中配合使用更佳：
