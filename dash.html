@@ -830,7 +830,7 @@
 			var _sorted_domains = Object.keys(_DOMAIN_ICONS)
 			var _sorted_classes = ['opening', 'motion', 'window', 'illuminance']
 			var _sorted_units = ['μg/m³', 'ppm', '°C', '%', 'mg/m³', 'lm']
-			var _sorted_names = '玄客餐过主次儿书阳'
+			var _sorted_names = '爸妈爷外阿入玄客餐厨过洗走主浴次儿书阳'
 			function sortedCompare(sorted_items, item1, item2) {
 				index1 = sorted_items.indexOf(item1) >>> 0
 				index2 = sorted_items.indexOf(item2) >>> 0
@@ -933,6 +933,8 @@
 					_DOMAIN_ICONS.hasOwnProperty(entity_id.split('.')[0]) &&
 					!entity.attributes.hidden &&
 					!entity.attributes.dash_hidden &&
+					!entity_id.startsWith('binary_sensor.cube') &&
+					!entity_id.startsWith('binary_sensor.switch') &&
 					(!_group_entity_ids || _group_entity_ids.indexOf(entity_id) != -1)
 				)
 			}
