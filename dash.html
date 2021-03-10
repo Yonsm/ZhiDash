@@ -524,6 +524,10 @@
 				console.log('Call service: ' + body)
 			}
 
+			function mqttPublish(topic, payload) {
+				callService('mqtt', 'publish', {'topic': topic,'payload': payload})
+			}
+
 			_DOMAIN_ICONS = {
 				weather: 'weather-partly-cloudy',
 				sensor: 'flower',
@@ -626,9 +630,9 @@
 				if (entity.attributes.hasOwnProperty('dash_click')) {
 					var dash_click = entity.attributes.dash_click
 					if (dash_click.substring(0, 10).includes('://') || dash_click.startsWith('/')) {
-						dash_click = "location='" + dash_click + "'"
+						dash_click = 'location="' + dash_click + '"'
 					}
-					html += ' onclick="' + dash_click + '"'
+					html += " onclick='" + dash_click + "'"
 				} else if (_CLICKABLE_DOMAINS.indexOf(domain) != -1) {
 					html += ' onclick="onClick(this)"'
 				}
@@ -722,9 +726,9 @@
 						if (attributes.hasOwnProperty('dash_extra_click')) {
 							var dash_extra_click = attributes.dash_extra_click
 							if (dash_extra_click.startsWith('http') || dash_extra_click.startsWith('/')) {
-								dash_extra_click = "location='" + dash_extra_click + "'"
+								dash_extra_click = 'location="' + dash_extra_click + '"'
 							}
-							extra = '<span class="tuner" onclick="event.stopPropagation(); ' + dash_extra_click + '">' + extra + '</span>'
+							extra = '<span class="tuner" onclick=\'event.stopPropagation(); ' + dash_extra_click + "'>" + extra + '</span>'
 						}
 					} else if (domain == 'climate' || domain == 'fan') {
 						var extra = ''
