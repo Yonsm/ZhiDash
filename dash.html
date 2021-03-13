@@ -628,11 +628,7 @@
 
 				var html = '<div class="entity ' + domain + '" id="' + entity_id + '"'
 				if (entity.attributes.hasOwnProperty('dash_click')) {
-					var dash_click = entity.attributes.dash_click
-					if (dash_click.substring(0, 10).includes('://') || dash_click.startsWith('/')) {
-						dash_click = 'location="' + dash_click + '"'
-					}
-					html += " onclick='" + dash_click + "'"
+					html += " onclick='" + makeClick(entity.attributes.dash_click) + "'"
 				} else if (_CLICKABLE_DOMAINS.indexOf(domain) != -1) {
 					html += ' onclick="onClick(this)"'
 				}
@@ -724,11 +720,7 @@
 							extra = '<marquee scrollamount="3">' + extra + '</marquee>'
 						}
 						if (attributes.hasOwnProperty('dash_extra_click')) {
-							var dash_extra_click = attributes.dash_extra_click
-							if (dash_extra_click.startsWith('http') || dash_extra_click.startsWith('/')) {
-								dash_extra_click = 'location="' + dash_extra_click + '"'
-							}
-							extra = '<span class="tuner" onclick=\'event.stopPropagation(); ' + dash_extra_click + "'>" + extra + '</span>'
+							extra = '<span class="tuner" onclick=\'event.stopPropagation(); ' + makeClick(attributes.dash_extra_click) + "'>" + extra + '</span>'
 						}
 					} else if (domain == 'climate' || domain == 'fan') {
 						var extra = ''
@@ -787,6 +779,18 @@
 					}
 				}
 				return ''
+			}
+
+			function makeClick(click) {
+				if (click.startsWith('/')) {
+					if (self != top) {
+						return 'window.open("' + click + '")'
+					}
+				}
+				else if (!click.substring(0, 10).includes('://')) {
+					return click
+				}
+				return 'location="' + click + '"'
 			}
 
 			function renderTemplate(template, state, attributes, trans) {
