@@ -525,7 +525,7 @@
 			}
 
 			function mqttPublish(topic, payload) {
-				callService('mqtt', 'publish', {'topic': topic,'payload': payload})
+				callService('mqtt', 'publish', { 'topic': topic, 'payload': payload })
 			}
 
 			_DOMAIN_ICONS = {
@@ -572,6 +572,11 @@
 				dry: '除湿',
 				fan: '送风',
 				fan_only: '送风',
+
+				Charging: '充电中',
+				Cleaning: '清扫中',
+				Paused: '暂停',
+				Error: '错误',
 
 				None: '无',
 				unknown: '未知',
@@ -712,6 +717,12 @@
 				html += '</div>'
 
 				var dash_extra_forced = attributes.dash_extra_forced
+				if (!dash_extra_forced) {
+					if (domain == 'vacuum')
+						dash_extra_forced = attributes.status
+					else if (domain == 'weather')
+						dash_extra_forced = attributes.attribution
+				}
 				if (!off || dash_extra_forced) {
 					var dash_extra = typeof (dash_extra_forced) == 'string' ? dash_extra_forced : attributes.dash_extra
 					if (dash_extra) {
@@ -834,7 +845,7 @@
 			var _sorted_domains = Object.keys(_DOMAIN_ICONS)
 			var _sorted_classes = ['opening', 'motion', 'window', 'illuminance']
 			var _sorted_units = ['μg/m³', 'ppm', '°C', '%', 'mg/m³', 'lm']
-			var _sorted_names = '爸妈爷外阿入玄客餐厨过洗走主浴次儿书阳'
+			var _sorted_names = '爸妈爷外阿入玄客餐厨过洗走主浴衣次儿书阳'
 			function sortedCompare(sorted_items, item1, item2) {
 				index1 = sorted_items.indexOf(item1) >>> 0
 				index2 = sorted_items.indexOf(item2) >>> 0
