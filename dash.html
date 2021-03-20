@@ -254,11 +254,10 @@
 
 				// Parse api url
 				var params = location.search.split('@')
-				if (params.length > 1 && params[1].startsWith('ws')) {
+				if (params.length > 1 && params[1].startsWith('ws'))
 					_wsapi = params[1]
-				} else {
+				else
 					_wsapi = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host
-				}
 				_wsapi += '/api/websocket'
 
 				// Parse access token
@@ -266,7 +265,8 @@
 				if (!_token && localStorage.hassTokens) {
 					try {
 						_token = JSON.parse(localStorage.hassTokens).access_token
-					} catch (e) { }
+					} catch (e) {
+					}
 				}
 				connect()
 			}
@@ -285,26 +285,19 @@
 			}
 
 			function onOpen() {
-				if (_token) {
+				if (_token)
 					_ws.send('{"type": "auth", "' + (_token.length < 20 ? 'api_password' : 'access_token') + '": "' + _token + '"}')
-				}
 				_ws.send('{"id": 1, "type": "get_states"}')
 				_ws.send('{"id": 2, "type": "subscribe_events", "event_type": "state_changed"}')
 			}
 
 			var _retryCount = 0
 			function onClose() {
-				var retry = ''
-				if (_retryCount < 5) {
-					var timeout = Math.pow(4, _retryCount++)
-					setTimeout('connect()', timeout * 1000)
-					if (_retryCount == 1) {
-						return
-					}
-					retry = timeout + ' 秒后尝试 '
-				}
-				if (!document.getElementById('error')) {
-					floater('error', '连接关闭，' + retry + '<a href="javascript:connect()">重新连接</a>')
+				var timeout = Math.min(Math.pow(4, _retryCount++), 3600)
+				setTimeout('connect()', timeout * 1000)
+				if (_retryCount > 1 && !document.getElementById('error')) {
+					var delay = (timeout > 60) ? (Math.ceil(timeout / 60) + ' 分钟') : (timeout + ' 秒')
+					floater('error', '连接关闭，' + delay + '后<a href="javascript:connect()">重新连接</a>')
 				}
 			}
 
@@ -353,11 +346,11 @@
 						break
 					case 'auth_invalid':
 						var error =
-							'无效认证！请先 <a href="javascript:location=\'' +
+							'无效认证！请先<a href="javascript:location=\'' +
 							location.protocol +
 							'//' +
 							location.host +
-							'\'">登录首页</a> 并保存后 <a href="javascript:location.reload()">刷新</a>'
+							'\'">登录首页</a> 并保存后<a href="javascript:location.reload()">刷新</a>'
 						error +=
 							'<div style="font-size:8px; color:#999999; line-height: 16px">也可以指定长期访问令牌和地址，如：' +
 							location.href.split('?')[0] +
@@ -375,14 +368,12 @@
 				// Fetch entities id in group
 				var group_id = location.hash.slice(1)
 				if (group_id) {
-					if (!group_id.startsWith('group.')) {
+					if (!group_id.startsWith('group.'))
 						group_id = 'group.' + group_id
-					}
 					_group_entity_ids = []
 					fetchEntities(group_id)
-					if (_group_entity_ids.length == 0) {
+					if (_group_entity_ids.length == 0)
 						_group_entity_ids = null
-					}
 				} else {
 					_group_entity_ids = null
 				}
@@ -419,20 +410,23 @@
 
 				// Generate entities
 				var html = ''
-				for (var i in entities) {
+				for (var i in entities)
 					html += makeGrid(entities[i])
-				}
 
-				if (location.hash) {
+				if (location.hash)
 					html += makeUtility("location.hash = ''; reloadContent()", 'keyboard-backspace')
-				}
 				html += makeUtility("location.reload()", 'reload')
-				if (self == top) {
+				if (self == top)
 					html += makeUtility("location = '/'", 'home-assistant')
-				}
 
 				floater()
 				document.getElementById('content').innerHTML = html
+			}
+
+			_refresh_timer = null
+			function refresh() {
+				_refresh_timer = null
+				connect()
 			}
 
 			function updateGrid(entity) {
@@ -444,12 +438,14 @@
 
 					if (entity.attributes.dash_relation) {
 						var relation = findEntity(entity.attributes.dash_relation)
-						if (relation) {
+						if (relation)
 							updateGrid(relation)
-						}
 					}
 				} else if (isValidEntity(entity)) {
-					floater('error', '发现新设备“' + entity.attributes.friendly_name + '”，请<a href="javascript:connect()">重新连接</a>')
+					if (_refresh_timer)
+						clearTimeout(_refresh_timer)
+					_refresh_timer = setTimeout('refresh()', 1000 * 60)
+					floater('error', '发现“' + entity.attributes.friendly_name + '”，1 分钟后<a href="javascript:connect()">重新连接</a>')
 				} else {
 					console.log('Skip entity event: ' + entity_id)
 				}
@@ -493,11 +489,10 @@
 				var extra = moder.parentElement
 				var grid = extra.parentElement
 				var mode = moder.options[moder.selectedIndex].value
-				if (grid.className == 'entity climate') {
+				if (grid.className == 'entity climate')
 					doService('set_hvac_mode', { entity_id: grid.id, hvac_mode: mode }, moder)
-				} else {
+				else
 					doService('set_speed', { entity_id: grid.id, speed: mode }, moder)
-				}
 			}
 
 			function doService(service, data, element) {
@@ -552,6 +547,10 @@
 			_CLICKABLE_DOMAINS = ['light', 'switch', 'media_player', 'cover', 'vacuum', 'fan', 'climate', 'group']
 
 			_TRANS = {
+				None: '无',
+				unknown: '未知',
+				unavailable: '不可用',
+
 				off: '关闭',
 				on: '开启',
 
@@ -573,14 +572,11 @@
 				fan: '送风',
 				fan_only: '送风',
 
-				Charging: '充电中',
-				Cleaning: '清扫中',
-				Paused: '暂停',
 				Error: '错误',
-
-				None: '无',
-				unknown: '未知',
-				unavailable: '不可用',
+				Paused: '暂停',
+				Cleaning: '清扫中',
+				Charging: '充电中',
+				'Charger disconnected': '充电断开',
 			}
 
 			_BINARY_SENSOR_ICONS = {
@@ -632,14 +628,12 @@
 				var domain = entity_id.split('.')[0]
 
 				var html = '<div class="entity ' + domain + '" id="' + entity_id + '"'
-				if (entity.attributes.hasOwnProperty('dash_click')) {
+				if (entity.attributes.hasOwnProperty('dash_click'))
 					html += " onclick='" + makeClick(entity.attributes.dash_click) + "'"
-				} else if (_CLICKABLE_DOMAINS.indexOf(domain) != -1) {
+				else if (_CLICKABLE_DOMAINS.indexOf(domain) != -1)
 					html += ' onclick="onClick(this)"'
-				}
-				if (domain == 'camera') {
+				if (domain == 'camera')
 					html += ' style="background-image:url(' + entity.attributes.entity_picture + ')"'
-				}
 				html += '>'
 				html += makeEntity(entity)
 				html += '</div> '
@@ -676,18 +670,16 @@
 
 					if (!off) {
 						var unit = attributes.hasOwnProperty('dash_unit') ? renderTemplate(attributes.dash_unit, state, attributes) : attributes.unit_of_measurement
-						if (unit) {
+						if (unit)
 							html += '<span class="unit">' + unit + '</span>'
-						}
 					}
 				} else if (domain != 'camera') {
 					html += '<div class="state' + off + '">'
 
 					if (has_dash_icon) {
 						var icon = renderTemplate(attributes.dash_icon, state, attributes)
-						if (icon == '' || icon == 'unavailable' || icon == 'unknown' || icon == 'None') {
+						if (icon == '' || icon == 'unavailable' || icon == 'unknown' || icon == 'None')
 							icon = attributes.icon
-						}
 					} else {
 						var icon = attributes.icon
 					}
@@ -700,9 +692,8 @@
 						}
 					} else if (domain == 'binary_sensor') {
 						var device_class = attributes.device_class
-						if (!_BINARY_SENSOR_ICONS.hasOwnProperty(device_class)) {
+						if (!_BINARY_SENSOR_ICONS.hasOwnProperty(device_class))
 							device_class = 'default'
-						}
 						icon = _BINARY_SENSOR_ICONS[device_class][off ? 0 : 1]
 					} else if (domain == 'weather') {
 						icon = 'weather-' + (_WEATHER_ICONS[state] || state)
@@ -710,9 +701,8 @@
 						icon = _DOMAIN_ICONS[domain]
 					}
 
-					if (icon) {
+					if (icon)
 						html += '<i class="mdi mdi-' + icon + '"></i>'
-					}
 				}
 				html += '</div>'
 
@@ -727,18 +717,14 @@
 					var dash_extra = typeof (dash_extra_forced) == 'string' ? dash_extra_forced : attributes.dash_extra
 					if (dash_extra) {
 						var extra = renderTemplate(dash_extra, state, attributes, true)
-						if (extra.length > 8) {
+						if (extra.length > 8)
 							extra = '<marquee scrollamount="3">' + extra + '</marquee>'
-						}
-						if (attributes.hasOwnProperty('dash_extra_click')) {
+						if (attributes.hasOwnProperty('dash_extra_click'))
 							extra = '<span class="tuner" onclick=\'event.stopPropagation(); ' + makeClick(attributes.dash_extra_click) + "'>" + extra + '</span>'
-						}
 					} else if (domain == 'climate' || domain == 'fan') {
 						var extra = ''
-						if (domain == 'climate') {
+						if (domain == 'climate')
 							extra += '<span class="tuner" onclick="onTune(event)">▽</span>'
-						}
-
 						extra += '<select class="moder" onclick="event.stopPropagation()" onchange="onMode(this)">'
 
 						var mode_list = domain == 'climate' ? attributes.hvac_modes : attributes.speed_list
@@ -748,16 +734,14 @@
 							var key = mode.toLowerCase()
 							var text = _TRANS[key] || mode.replace(/level/gi, '档位')
 							extra += '<option value="' + mode + '"' + (mode == selected ? ' selected' : '') + '>' + text
-							if (mode == selected && domain == 'climate') {
+							if (mode == selected && domain == 'climate')
 								extra += ' ' + attributes.temperature
-							}
 							extra += '</option>'
 						}
 						extra += '</select>'
 
-						if (domain == 'climate') {
+						if (domain == 'climate')
 							extra += '<span class="tuner" onclick="onTune(event)">△</span>'
-						}
 					} else {
 						return html
 					}
@@ -783,20 +767,18 @@
 				var warning = ''
 				var range = _SENSOR_RANGES[type]
 				if (range) {
-					if (value >= range[1]) {
+					if (value >= range[1])
 						return ' critical'
-					} else if (value >= range[0]) {
+					else if (value >= range[0])
 						return ' caution'
-					}
 				}
 				return ''
 			}
 
 			function makeClick(click) {
 				if (click.startsWith('/')) {
-					if (self != top) {
+					if (self != top)
 						return 'window.open("' + click + '")'
-					}
 				}
 				else if (!click.substring(0, 10).includes('://')) {
 					return click
@@ -805,9 +787,8 @@
 			}
 
 			function renderTemplate(template, state, attributes, trans) {
-				if (attributes.hasOwnProperty(template)) {
+				if (attributes.hasOwnProperty(template))
 					return attributes[template]
-				}
 
 				var result = ''
 				for (var end = 0; true; end++) {
@@ -867,15 +848,10 @@
 				// Sort by dash_order
 				var order1 = attributes1.dash_order
 				var order2 = attributes2.dash_order
-				if (order1) {
-					if (order2) {
-						return parseInt(order1) - parseInt(order2)
-					} else {
-						return -1
-					}
-				} else if (order2) {
+				if (order1)
+					return order2 ? parseInt(order1) - parseInt(order2) : -1
+				else if (order2)
 					return 1
-				}
 
 				if (domain1 == 'sensor') {
 					// Sort by unit_of_measurement
@@ -919,9 +895,8 @@
 			function findEntity(entity_id) {
 				for (var i in _entities) {
 					var entity = _entities[i]
-					if (entity.entity_id == entity_id) {
+					if (entity.entity_id == entity_id)
 						return entity
-					}
 				}
 				console.log('Entity id not found: ' + entity_id)
 				return null
@@ -934,9 +909,8 @@
 					var ids = group.attributes.entity_id
 					for (var i in ids) {
 						var entity_id = ids[i]
-						if (entity_id.startsWith('group')) {
+						if (entity_id.startsWith('group'))
 							fetchEntities(entity_id)
-						}
 						_group_entity_ids.push(entity_id)
 					}
 				}
