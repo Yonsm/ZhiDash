@@ -251,23 +251,34 @@
 				document.styleSheets[1].cssRules[0].style.width = width + 'px'
 				document.styleSheets[1].cssRules[1].style.width = Math.ceil(width * 1.5 + 1) + 'px'
 
-				// Parse api url
-				var params = location.search.split('@')
-				if (params.length > 1 && params[1].startsWith('ws'))
-					_wsapi = params[1]
-				else
-					_wsapi = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host
-				_wsapi += '/api/websocket'
-
-				// Parse access token
-				_token = params[0].slice(1)
-				if (!_token && localStorage.hassTokens) {
+				// Parse params
+				var args = urlArgs()
+				_wsapi = (args.api || ((location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host)) + '/api/websocket'
+				_token = args.token
+				if (!_token) {
 					try {
 						_token = JSON.parse(localStorage.hassTokens).access_token
 					} catch (e) {
+						return handleAuth(args.code)
 					}
 				}
+
 				connect()
+			}
+
+			function urlArgs() {
+				var args = {}
+				var query = location.search.substring(1)
+				var pairs = query.split('&')
+				for (var i = 0; i < pairs.length; i++) {
+					var pos = pairs[i].indexOf('=')
+					if (pos == -1)
+						continue
+					var name = pairs[i].substring(0, pos)
+					var value = pairs[i].substring(pos + 1)
+					args[name] = value
+				}
+				return args
 			}
 
 			function connect() {
@@ -366,32 +377,57 @@
 			}
 
 			function onAuthInvalid() {
-				_retryCount = -1
-				if (!_token)
-					return showAuthError('无效认证')
+				if (_retryCount < 0)
+					return showAuthError('无效认证') // Impossible?
 				else
-					_token = null
+					_retryCount = -1
 
+				_token = null
 				try {
 					var tokens = JSON.parse(localStorage.hassTokens)
-					var body = 'grant_type=refresh_token&refresh_token=' + tokens.refresh_token + '&client_id=' + encodeURIComponent(tokens.clientId)
+					getAuthToken('refresh_token', 'refresh_token=' + tokens.refresh_token, tokens)
 				} catch (e) {
 					return showAuthError('无登录令牌')
 				}
+			}
 
-				console.log('尝试刷新令牌：' + body)
+			function handleAuth(code) {
+				if (code) {
+					// Auth callback
+					floater('loading')
+					console.log('认证回调：' + code)
+					getAuthToken('authorization_code', 'code=' + code)
+				} else {
+					// Auth request
+					var client_id = location.protocol + '//' + location.host + '/'
+					var url = '/auth/authorize?client_id=' + encodeURIComponent(client_id) + '&redirect_uri=' + encodeURIComponent(location.href)
+					floater('error', '无登录令牌。2 秒后转到<a href="' + url + '">登录页面</a>')
+					setTimeout(function () { location = url }, 2000)
+				}
+			}
+
+			function getAuthToken(grant_type, param, tokens) {
+				var hassUrl = location.protocol + '//' + location.host
+				var body = 'grant_type=' + grant_type + '&' + param + '&client_id=' + encodeURIComponent(hassUrl + '/')
 				var xhr = new XMLHttpRequest()
 				xhr.onreadystatechange = function () {
-					if (xhr.readyState === 4) {
-						if (xhr.status === 200) {
-							res = xhr.response
-							tokens.expires_in = res.expires_in
-							tokens.access_token = _token = res.access_token
+					if (xhr.readyState == 4) {
+						if (xhr.status == 200) {
+							resp = xhr.response
+							if (tokens) {
+								tokens.expires_in = resp.expires_in
+								tokens.access_token = resp.access_token
+							} else {
+								tokens = resp
+								tokens.hassUrl = hassUrl
+								tokens.clientId = hassUrl + '/'
+							}
+							_token = tokens.access_token
 							localStorage.hassTokens = JSON.stringify(tokens)
 							setTimeout(connect, 200)
-							console.log('刷新令牌成功：' + _token)
+							console.log('获取令牌成功：' + _token)
 						} else {
-							showAuthError('刷新令牌失败')
+							showAuthError('获取令牌失败')
 						}
 					}
 				}
@@ -399,11 +435,12 @@
 				xhr.open('POST', '/auth/token')
 				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 				xhr.send(body)
+				console.log('尝试获取令牌：' + body)
 			}
 
 			function showAuthError(text) {
-				var error = text + '！请先<a href="javascript:location=\'' + location.protocol + '//' + location.host + '\'">登录首页</a> 并保存后<a href="javascript:location.reload()">刷新</a>'
-				error += '<div style="font-size:8px; color:#999999; line-height: 16px">也可以指定长期访问令牌和地址，如：' + location.href.split('?')[0] + '?password@ws:host:8123</div>'
+				var error = text + '！请<a href="javascript:location=\'' + location.protocol + '//' + location.host + '\'">登录首页</a>并保存后<a href="javascript:location.reload()">刷新</a>'
+				error += '<div style="font-size:8px; color:#999999; line-height: 16px">也可以指定长期访问令牌和地址，如：' + location.href.split('?')[0] + '?token=xxxx&api=ws:host:8123</div>'
 				floater('error', error)
 			}
 
