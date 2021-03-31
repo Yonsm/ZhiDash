@@ -250,7 +250,6 @@
 				width = Math.floor(width * 10) / 10
 				document.styleSheets[1].cssRules[0].style.width = width + 'px'
 				document.styleSheets[1].cssRules[1].style.width = Math.ceil(width * 1.5 + 1) + 'px'
-				// console.log('clientWidth:' + clientWidth + ' count:' + count + ' width:' + width);
 
 				// Parse api url
 				var params = location.search.split('@')
@@ -272,6 +271,10 @@
 			}
 
 			function connect() {
+				if (_ws) {
+					_ws.close()
+					delete _ws
+				}
 				_wsid = 2
 				_call_entity_id = null
 				_entities = null
@@ -293,74 +296,115 @@
 
 			var _retryCount = 0
 			function onClose() {
+				if (_retryCount < 0) // Skip auth invalid
+					return
 				var timeout = Math.min(Math.pow(4, _retryCount++), 3600)
-				setTimeout('connect()', timeout * 1000)
-				if (_retryCount > 1 && !document.getElementById('error')) {
+				setTimeout(connect, timeout * 1000)
+				if (_retryCount > 1 && !document.getElementById('error')) { // Skip first or existing error
 					var delay = (timeout > 60) ? (Math.ceil(timeout / 60) + ' 分钟') : (timeout + ' 秒')
 					floater('error', '连接关闭，' + delay + '后<a href="javascript:connect()">重新连接</a>')
 				}
 			}
 
 			function onMessage(message) {
-				var json = JSON.parse(message.data)
-				switch (json.type) {
+				var data = JSON.parse(message.data)
+				switch (data.type) {
 					case 'result':
-						if (json.success) {
-							if (json.id == 1) {
-								// Responed to get_states
-								_retryCount = 0
-								_entities = json.result
-								reloadContent()
-								break
-							} else if (json.id == 2) {
-								// Responed to subscribe_events
-								break
-							} else if (json.id == _wsid) {
-								if (_call_entity_id) {
-									// Avoid mis-operation and ensure animation
-									setTimeout(function () {
-										// Responed to call_service
-										document.getElementById(_call_entity_id).style = ''
-										_call_entity_id = null
-									}, 1000)
-								}
-								break
-							}
-						}
-						floater('error', '未知结果 ' + (json.error ? json.error.message : message.data) + '，请<a href="javascript:connect()">重新连接</a>')
+						onResult(message, data)
 						break
 					case 'event':
-						var entity = json.event.data.new_state
-						if (entity) {
-							var entity_id = entity.entity_id
-							for (var i in _entities) {
-								if (_entities[i].entity_id == entity_id) {
-									_entities[i] = entity
-									break
-								}
-							}
-							updateGrid(entity)
-						} else {
-							floater('error', '事件错误 ' + (json.error.message || message.data) + '，请<a href="javascript:connect()">重新连接</a>')
-						}
+						onEvent(message, data)
 						break
 					case 'auth_invalid':
-						var error =
-							'无效认证！请先<a href="javascript:location=\'' +
-							location.protocol +
-							'//' +
-							location.host +
-							'\'">登录首页</a> 并保存后<a href="javascript:location.reload()">刷新</a>'
-						error +=
-							'<div style="font-size:8px; color:#999999; line-height: 16px">也可以指定长期访问令牌和地址，如：' +
-							location.href.split('?')[0] +
-							'?password@ws:host:8123</div>'
-						floater('error', error)
+						onAuthInvalid()
+						break
+					case 'auth_required':
+					case 'auth_ok':
 						break
 					default:
-						console.log(json)
+						console.log('未知消息：' + data)
 						break
 				}
+			}
+
+			function onResult(message, data) {
+				if (!data.success) {
+					floater('error', '未知结果 ' + (data.error ? data.error.message : message.data) + '，请<a href="javascript:connect()">重新连接</a>')
+				}
+				else if (data.id == 1) {
+					// Responed to get_states
+					_retryCount = 0
+					_entities = data.result
+					reloadContent()
+				}
+				else if (data.id == 2) {
+					// Responed to subscribe_events
+				} else if (data.id == _wsid && _call_entity_id) {
+					// Avoid mis-operation and ensure animation
+					setTimeout(function () {
+						// Responed to call_service
+						document.getElementById(_call_entity_id).style = ''
+						_call_entity_id = null
+					}, 1000)
+				}
+			}
+
+			function onEvent(message, data) {
+				var entity = data.event.data.new_state
+				if (entity) {
+					var entity_id = entity.entity_id
+					for (var i in _entities) {
+						if (_entities[i].entity_id == entity_id) {
+							_entities[i] = entity
+							break
+						}
+					}
+					updateGrid(entity)
+				} else {
+					floater('error', '事件错误 ' + (data.error ? data.error.message : message.data) + '，请<a href="javascript:connect()">重新连接</a>')
+				}
+			}
+
+			function onAuthInvalid() {
+				_retryCount = -1
+				if (!_token)
+					return showAuthError('无效认证')
+				else
+					_token = null
+
+				try {
+					var tokens = JSON.parse(localStorage.hassTokens)
+					var body = 'grant_type=refresh_token&refresh_token=' + tokens.refresh_token + '&client_id=' + encodeURIComponent(tokens.clientId)
+				} catch (e) {
+					return showAuthError('无登录令牌')
+				}
+
+				console.log('尝试刷新令牌：' + body)
+				var xhr = new XMLHttpRequest()
+				xhr.onreadystatechange = function () {
+					if (xhr.readyState === 4) {
+						if (xhr.status === 200) {
+							res = xhr.response
+							tokens.expires_in = res.expires_in
+							tokens.access_token = _token = res.access_token
+							localStorage.hassTokens = JSON.stringify(tokens)
+							setTimeout(connect, 200)
+							console.log('刷新令牌成功：' + _token)
+						} else {
+							showAuthError('刷新令牌失败')
+						}
+					}
+				}
+				xhr.responseType = 'json'
+				xhr.open('POST', '/auth/token')
+				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+				xhr.send(body)
+			}
+
+			function showAuthError(text) {
+				var error = text + '！请先<a href="javascript:location=\'' + location.protocol + '//' + location.host + '\'">登录首页</a> 并保存后<a href="javascript:location.reload()">刷新</a>'
+				error += '<div style="font-size:8px; color:#999999; line-height: 16px">也可以指定长期访问令牌和地址，如：' + location.href.split('?')[0] + '?password@ws:host:8123</div>'
+				floater('error', error)
 			}
 
 			var _group_entity_ids = null
@@ -424,18 +468,11 @@
 			}
 
 			_refresh_timer = null
-			function refresh() {
-				_refresh_timer = null
-				connect()
-			}
-
 			function updateGrid(entity) {
 				var entity_id = entity.entity_id
 				var grid = document.getElementById(entity_id)
 				if (grid) {
 					grid.innerHTML = makeEntity(entity)
-					//console.log('Update entity: ' + entity_id);
-
 					if (entity.attributes.dash_relation) {
 						var relation = findEntity(entity.attributes.dash_relation)
 						if (relation)
@@ -444,10 +481,13 @@
 				} else if (isValidEntity(entity)) {
 					if (_refresh_timer)
 						clearTimeout(_refresh_timer)
-					_refresh_timer = setTimeout('refresh()', 1000 * 60)
+					_refresh_timer = setTimeout(function () {
+						_refresh_timer = null
+						connect()
+					}, 1000 * 60)
 					floater('error', '发现“' + entity.attributes.friendly_name + '”，1 分钟后<a href="javascript:connect()">重新连接</a>')
 				} else {
-					console.log('Skip entity event: ' + entity_id)
+					console.log('忽略事件：' + entity_id)
 				}
 			}
 
@@ -498,12 +538,12 @@
 			function doService(service, data, element) {
 				var entity_id = data.entity_id
 				if (_call_entity_id) {
-					console.log('Skip call: ' + service + '/' + entity_id)
+					console.log('忽略调用：' + service + '/' + entity_id)
 					return
 				}
 				_call_entity_id = entity_id
 				element.style = 'animation: tuning 1s infinite alternate'
-				console.log('Do service: ' + service + '/' + entity_id)
+				//console.log('调用服务：' + service + '/' + entity_id)
 				callService(entity_id.split('.')[0], service, data)
 			}
 
@@ -516,7 +556,7 @@
 					service_data: data,
 				})
 				_ws.send(body)
-				console.log('Call service: ' + body)
+				console.log('调用服务：' + body)
 			}
 
 			function mqttPublish(topic, payload) {
@@ -898,14 +938,13 @@
 					if (entity.entity_id == entity_id)
 						return entity
 				}
-				console.log('Entity id not found: ' + entity_id)
+				console.log('无法找到实体：' + entity_id)
 				return null
 			}
 
 			function fetchEntities(group_id) {
 				var group = findEntity(group_id)
 				if (group) {
-					//console.log('Sort by ' + group_id)
 					var ids = group.attributes.entity_id
 					for (var i in ids) {
 						var entity_id = ids[i]
