@@ -7,12 +7,12 @@ _entities = null // All entities
 
 function load() {
 	// Respond to mobile browser
-	if (navigator.userAgent.match('Mobile')) {
-		var meta = document.createElement('meta')
-		meta.name = 'viewport'
-		meta.setAttribute('content', 'width=device-width, initial-scale=1, user-scalable=no')
-		document.getElementsByTagName('head')[0].appendChild(meta)
-	}
+	// if (navigator.userAgent.match('Mobile')) {
+	// 	var meta = document.createElement('meta')
+	// 	meta.name = 'viewport'
+	// 	meta.setAttribute('content', 'width=device-width, initial-scale=1, user-scalable=no')
+	// 	document.getElementsByTagName('head')[0].appendChild(meta)
+	// }
 
 	// Adjust grid width
 	var clientWidth = document.documentElement.clientWidth
