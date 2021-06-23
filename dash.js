@@ -6,14 +6,6 @@ _call_entity_id = null // Processing entity_id
 _entities = null // All entities
 
 function load() {
-	// Respond to mobile browser
-	// if (navigator.userAgent.match('Mobile')) {
-	// 	var meta = document.createElement('meta')
-	// 	meta.name = 'viewport'
-	// 	meta.setAttribute('content', 'width=device-width, initial-scale=1, user-scalable=no')
-	// 	document.getElementsByTagName('head')[0].appendChild(meta)
-	// }
-
 	// Adjust grid width
 	var clientWidth = document.documentElement.clientWidth
 	var count = Math.floor(clientWidth / 124)
@@ -80,7 +72,7 @@ var _retryCount = 0
 function onClose() {
 	if (_retryCount < 0) // Skip auth invalid
 		return
-	var timeout = Math.min(Math.pow(4, _retryCount++), 3600)
+	var timeout = Math.min(Math.pow(4, ++_retryCount), 3600)
 	setTimeout(connect, timeout * 1000)
 	if (_retryCount > 1 && !document.getElementById('error')) { // Skip first or existing error
 		var delay = (timeout > 60) ? (Math.ceil(timeout / 60) + ' 分钟') : (timeout + ' 秒')
@@ -563,40 +555,40 @@ function makeEntity(entity) {
 			dash_extra_forced = attributes.attribution
 	}
 	if (!off || dash_extra_forced) {
+		var extra = null
 		var dash_extra = typeof (dash_extra_forced) == 'string' ? dash_extra_forced : attributes.dash_extra
 		if (dash_extra) {
-			var extra = renderTemplate(dash_extra, state, attributes, true)
+			extra = renderTemplate(dash_extra, state, attributes, true)
 			if (extra.length > 8)
 				extra = '<marquee scrollamount="3">' + extra + '</marquee>'
 			if (attributes.hasOwnProperty('dash_extra_click'))
 				extra = '<span class="tuner" onclick=\'event.stopPropagation(); ' + makeClick(attributes.dash_extra_click) + "'>" + extra + '</span>'
-		} else if (domain == 'climate' || domain == 'fan') {
-			var extra = ''
-			if (domain == 'climate')
-				extra += '<span class="tuner" onclick="onTune(event)">▽</span>'
-			extra += '<select class="moder" onclick="event.stopPropagation()" onchange="onMode(this)">'
-
-			var mode_list = domain == 'climate' ? attributes.hvac_modes : attributes.speed_list
-			var selected = domain == 'climate' ? state : attributes.speed_level || attributes.speed
-			for (var i in mode_list) {
-				var mode = mode_list[i]
-				var key = mode.toLowerCase()
-				var text = _TRANS[key] || mode.replace(/level/gi, '档位')
-				extra += '<option value="' + mode + '"' + (mode == selected ? ' selected' : '') + '>' + text
-				if (mode == selected && domain == 'climate')
-					extra += ' ' + attributes.temperature
-				extra += '</option>'
-			}
-			extra += '</select>'
-
-			if (domain == 'climate')
-				extra += '<span class="tuner" onclick="onTune(event)">△</span>'
-		} else {
-			return html
+		} else if (domain == 'climate' && attributes.hvac_modes) {
+			extra = '<span class="tuner" onclick="onTune(event)">▽</span>' + makeSelect(attributes.hvac_modes, state, attributes.temperature) + '<span class="tuner" onclick="onTune(event)">△</span>'
+		} else if (domain == 'fan' && attributes.speed_list) {
+			extra = makeSelect(attributes.speed_list, attributes.speed_level || attributes.speed)
 		}
-		html += '<div class="extra' + off + '">' + extra + '</div>'
+		if (extra) {
+			html += '<div class="extra' + off + '">' + extra + '</div>'
+		}
 	}
 
+	return html
+}
+
+function makeSelect(mode_list, selected, temperature) {
+	html = '<select class="moder" onclick="event.stopPropagation()" onchange="onMode(this)">'
+	for (var i in mode_list) {
+		var mode = mode_list[i]
+		var key = mode.toLowerCase()
+		var text = _TRANS[key] || mode.replace(/level/gi, '档位')
+		html += '<option value="' + mode + '"' + (mode == selected ? ' selected' : '') + '>' + text
+		if (mode == selected && temperature) {
+			html += ' ' + temperature
+		}
+		html += '</option>'
+	}
+	html += '</select>'
 	return html
 }
 
