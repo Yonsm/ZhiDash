@@ -565,8 +565,10 @@ function makeEntity(entity) {
 				extra = '<span class="tuner" onclick=\'event.stopPropagation(); ' + makeClick(attributes.dash_extra_click) + "'>" + extra + '</span>'
 		} else if (domain == 'climate' && attributes.hvac_modes) {
 			extra = '<span class="tuner" onclick="onTune(event)">▽</span>' + makeSelect(attributes.hvac_modes, state, attributes.temperature) + '<span class="tuner" onclick="onTune(event)">△</span>'
-		} else if (domain == 'fan' && (attributes.preset_modes || attributes.speed_list)) {
-			extra = makeSelect(attributes.preset_modes || attributes.speed_list, attributes.preset_mode || attributes.speed_level || attributes.speed)
+		} else if (domain == 'fan' && attributes.preset_modes && attributes.preset_modes.length > 0) {
+			extra = makeSelect(attributes.preset_modes, attributes.preset_mode)
+		} else if (domain == 'fan' && attributes.speed_list && attributes.speed_list.length > 0) {
+			extra = makeSelect(attributes.speed_list, attributes.speed_level || attributes.speed)
 		}
 		if (extra) {
 			html += '<div class="extra' + off + '">' + extra + '</div>'
