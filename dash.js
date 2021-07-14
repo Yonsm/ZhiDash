@@ -259,10 +259,17 @@ function reloadContent() {
 		html += makeGrid(entities[i])
 
 	if (location.hash)
-		html += makeUtility("location.hash = ''; reloadContent()", 'keyboard-backspace')
-	html += makeUtility("location.reload()", 'reload')
-	if (self == top)
-		html += makeUtility("location = '/'", 'home-assistant')
+		html += makeUtility("location.hash = ''; reloadContent()", 'keyboard-backspace', '全部')
+	html += makeUtility("location.reload(true)", 'reload', '刷新')
+	if (self == top) {
+		html += makeUtility("location = '/'", 'home-assistant', '概览')
+		html += makeUtility("location = '/config/server_control'", 'server', '服务')
+		html += makeUtility("location = '/config/integrations'", 'puzzle', '集成')
+		html += makeUtility("location = '/config/logs'", 'math-log', '日志')
+		html += makeUtility("location = '/config/automation/dashboard'", 'robot', '自动化')
+		html += makeUtility("location = '/config/customize'", 'pencil', '自定义')
+		html += makeUtility("location = '/developer-tools'", 'hammer', '开发者')
+	}
 
 	floater()
 	document.getElementById('content').innerHTML = html
@@ -594,8 +601,8 @@ function makeSelect(mode_list, selected, temperature) {
 	return html
 }
 
-function makeUtility(action, icon) {
-	return '<div class="entity utility" onclick="' + action + '"><i class="mdi mdi-' + icon + '"></i></div>'
+function makeUtility(action, icon, title) {
+	return '<div class="entity" onclick="' + action + '"><div class="noname"></div><div class="state"><i class="mdi mdi-' + icon + '"></i></div><div class="extra">' + title + '</div></div>'
 }
 
 _SENSOR_RANGES = {

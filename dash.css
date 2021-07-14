@@ -49,12 +49,6 @@
 	}*/
 }
 
-.utility {
-	line-height: 120px;
-	font-size: 44px;
-	opacity: 0.8;
-}
-
 .weather {
 	background-color: #00bcd4;
 }
@@ -99,6 +93,11 @@
 	overflow: hidden;
 	text-overflow: clip;
 	white-space: nowrap;
+}
+
+.noname {
+	height: 16px;
+	line-height: 16px;
 }
 
 .state {
