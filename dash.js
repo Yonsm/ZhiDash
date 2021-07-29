@@ -340,7 +340,7 @@ function onMode(moder) {
 	if (grid.className == 'entity climate')
 		doService('set_hvac_mode', { entity_id: grid.id, hvac_mode: mode }, moder)
 	else
-		doService('set_speed', { entity_id: grid.id, speed: mode }, moder)
+		doService('set_preset_mode', { entity_id: grid.id, preset_mode: mode }, moder)
 }
 
 function doService(service, data, element) {
@@ -574,8 +574,6 @@ function makeEntity(entity) {
 			extra = '<span class="tuner" onclick="onTune(event)">▽</span>' + makeSelect(attributes.hvac_modes, state, attributes.temperature) + '<span class="tuner" onclick="onTune(event)">△</span>'
 		} else if (domain == 'fan' && attributes.preset_modes && attributes.preset_modes.length > 0) {
 			extra = makeSelect(attributes.preset_modes, attributes.preset_mode)
-		} else if (domain == 'fan' && attributes.speed_list && attributes.speed_list.length > 0) {
-			extra = makeSelect(attributes.speed_list, attributes.speed_level || attributes.speed)
 		}
 		if (extra) {
 			html += '<div class="extra' + off + '">' + extra + '</div>'
