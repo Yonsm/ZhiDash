@@ -2,14 +2,14 @@ _ws = null // WebSocket handle
 _wsid = 0 // WebSocket session id
 _wsapi = null // WebSocket api url
 _token = null // Access token or password
-_call_entity_id = null // Processing entity_id
 _entities = null // All entities
+_call_eid = null // Processing entity_id
 
 function load() {
 	// Adjust grid width
-	var clientWidth = document.documentElement.clientWidth
-	var count = Math.floor(clientWidth / 124)
-	var width = (clientWidth - count * 4) / count
+	var cwidth = document.documentElement.clientWidth
+	var count = Math.floor(cwidth / 124)
+	var width = (cwidth - count * 4) / count
 	width = Math.floor(width * 10) / 10
 	document.styleSheets[1].cssRules[0].style.width = width + 'px'
 	document.styleSheets[1].cssRules[1].style.width = Math.ceil(width * 1.5 + 1) + 'px'
@@ -44,16 +44,16 @@ function urlArgs() {
 	return args
 }
 
-function connect() {
+function connect(reason) {
 	if (_ws) {
 		_ws.close()
 		delete _ws
 	}
 	_wsid = 2
-	_call_entity_id = null
+	_call_eid = null
 	_entities = null
 
-	floater('loading')
+	floater('loading', reason)
 
 	_ws = new WebSocket(_wsapi)
 	_ws.onopen = onOpen
@@ -68,15 +68,21 @@ function onOpen() {
 	_ws.send('{"id": 2, "type": "subscribe_events", "event_type": "state_changed"}')
 }
 
-var _retryCount = 0
+_token_doing = false
+_retry_count = 0
 function onClose() {
-	if (_retryCount < 0) // Skip auth invalid
+	if (_token_doing < 0) { // Skip auth invalid
+		console.log('连接关闭，刷新令牌中')
 		return
-	var timeout = Math.min(Math.pow(4, ++_retryCount), 3600)
-	setTimeout(connect, timeout * 1000)
-	if (_retryCount > 1 && !document.getElementById('error')) { // Skip first or existing error
-		var delay = (timeout > 60) ? (Math.ceil(timeout / 60) + ' 分钟') : (timeout + ' 秒')
-		floater('error', '连接关闭，' + delay + '后<a href="javascript:connect()">重新连接</a>')
+	}
+	var timeout = Math.min(Math.pow(4, ++_retry_count), 3600)
+	var delay = (timeout > 60) ? (Math.ceil(timeout / 60) + ' 分钟') : (timeout + ' 秒')
+	var text = '连接关闭，' + delay + '后'
+	setTimeout('connect("第' + _retry_count + '次重连")', timeout * 1000)
+	if (_retry_count > 1) { // Skip first
+		error(text)
+	} else {
+		console.log(text + '重新连接')
 	}
 }
 
@@ -90,7 +96,7 @@ function onMessage(message) {
 			onEvent(message, data)
 			break
 		case 'auth_invalid':
-			onAuthInvalid()
+			onInvalid()
 			break
 		case 'auth_required':
 		case 'auth_ok':
@@ -103,22 +109,22 @@ function onMessage(message) {
 
 function onResult(message, data) {
 	if (!data.success) {
-		floater('error', '未知结果 ' + (data.error ? data.error.message : message.data) + '，请<a href="javascript:connect()">重新连接</a>')
+		error('未知结果 ' + (data.error ? data.error.message : message.data) + '，请')
 	}
 	else if (data.id == 1) {
 		// Responed to get_states
-		_retryCount = 0
+		_retry_count = 0
 		_entities = data.result
 		reloadContent()
 	}
 	else if (data.id == 2) {
 		// Responed to subscribe_events
-	} else if (data.id == _wsid && _call_entity_id) {
+	} else if (data.id == _wsid && _call_eid) {
 		// Avoid mis-operation and ensure animation
 		setTimeout(function () {
 			// Responed to call_service
-			document.getElementById(_call_entity_id).style = ''
-			_call_entity_id = null
+			document.getElementById(_call_eid).style = ''
+			_call_eid = null
 		}, 1000)
 	}
 }
@@ -136,20 +142,19 @@ function onEvent(message, data) {
 		updateGrid(entity)
 	} else {
 		console.log('事件错误：' + message.data)
-		//floater('error', '事件错误 ' + (data.error ? data.error.message : message.data) + '，请<a href="javascript:connect()">重新连接</a>')
+		//error('事件错误 ' + (data.error ? data.error.message : message.data) + '，请')
 	}
 }
 
-function onAuthInvalid() {
-	if (_retryCount < 0)
-		return showAuthError('无效认证') // Impossible?
-	else
-		_retryCount = -1
+function onInvalid() {
+	if (_token_doing)
+		return
 
 	_token = null
+	_token_doing = true
 	try {
 		var tokens = JSON.parse(localStorage.hassTokens)
-		getAuthToken('refresh_token', 'refresh_token=' + tokens.refresh_token, tokens)
+		getAuthToken('刷新令牌', 'refresh_token', 'refresh_token=' + tokens.refresh_token, tokens)
 	} catch (e) {
 		return showAuthError('无登录令牌')
 	}
@@ -158,9 +163,7 @@ function onAuthInvalid() {
 function handleAuth(code) {
 	if (code) {
 		// Auth callback
-		floater('loading')
-		console.log('认证回调：' + code)
-		getAuthToken('authorization_code', 'code=' + code)
+		getAuthToken('获取令牌', 'authorization_code', 'code=' + code)
 	} else {
 		// Auth request
 		var client_id = location.protocol + '//' + location.host + '/'
@@ -170,7 +173,8 @@ function handleAuth(code) {
 	}
 }
 
-function getAuthToken(grant_type, param, tokens) {
+function getAuthToken(reason, grant_type, param, tokens, callback) {
+	floater('loading', reason)
 	var hassUrl = location.protocol + '//' + location.host
 	var body = 'grant_type=' + grant_type + '&' + param + '&client_id=' + encodeURIComponent(hassUrl + '/')
 	var xhr = new XMLHttpRequest()
@@ -188,18 +192,18 @@ function getAuthToken(grant_type, param, tokens) {
 				}
 				_token = tokens.access_token
 				localStorage.hassTokens = JSON.stringify(tokens)
-				setTimeout(connect, 200)
+				setTimeout('connect("令牌重连")', 200)
 				console.log('获取令牌成功：' + _token)
 			} else {
 				showAuthError('获取令牌失败')
 			}
+			_token_doing = false
 		}
 	}
 	xhr.responseType = 'json'
 	xhr.open('POST', '/auth/token')
 	xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
 	xhr.send(body)
-	console.log('尝试获取令牌：' + body)
 }
 
 function showAuthError(text) {
@@ -291,9 +295,9 @@ function updateGrid(entity) {
 			clearTimeout(_refresh_timer)
 		_refresh_timer = setTimeout(function () {
 			_refresh_timer = null
-			connect()
+			connect('发现重连')
 		}, 1000 * 60)
-		floater('error', '发现“' + entity.attributes.friendly_name + '”，1 分钟后<a href="javascript:connect()">重新连接</a>')
+		error('发现“' + entity.attributes.friendly_name + '”，1 分钟后')
 	} else {
 		console.log('忽略事件：' + entity_id)
 	}
@@ -345,11 +349,11 @@ function onMode(moder) {
 
 function doService(service, data, element) {
 	var entity_id = data.entity_id
-	if (_call_entity_id) {
+	if (_call_eid) {
 		console.log('忽略调用：' + service + '/' + entity_id)
 		return
 	}
-	_call_entity_id = entity_id
+	_call_eid = entity_id
 	element.style = 'animation: tuning 1s infinite alternate'
 	//console.log('调用服务：' + service + '/' + entity_id)
 	callService(entity_id.split('.')[0], service, data)
@@ -777,4 +781,8 @@ function isValidEntity(entity) {
 
 function floater(type, text) {
 	document.getElementById('floater').innerHTML = type ? '<div id="' + type + '">' + (text || '') + '</div>' : ''
+}
+
+function error(text) {
+	floater('error', text + '<a href="javascript:connect(\'重新连接\')">重新连接</a>')
 }
