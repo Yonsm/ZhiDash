@@ -44,14 +44,12 @@ function urlArgs() {
 	return args
 }
 
+_ignore_error = false
 function connect(reason) {
-	if (_ws) {
-		_ws.close()
-		delete _ws
-	}
 	_wsid = 2
 	_call_eid = null
 	_entities = null
+	_ignore_error = false
 
 	floater('loading', reason)
 
@@ -61,6 +59,23 @@ function connect(reason) {
 	_ws.onmessage = onMessage
 }
 
+function reconnect(reason, seconds) {
+	_ignore_error = true
+
+	if (_ws) {
+		console.log('关闭旧连接')
+		_ws.close()
+		delete _ws
+		_ws = null
+	}
+
+	if (seconds) {
+		setTimeout("connect('" + reason + "')", seconds * 1000)
+	} else {
+		connect(reason)
+	}
+}
+
 function onOpen() {
 	if (_token)
 		_ws.send('{"type": "auth", "' + (_token.length < 20 ? 'api_password' : 'access_token') + '": "' + _token + '"}')
@@ -68,17 +83,16 @@ function onOpen() {
 	_ws.send('{"id": 2, "type": "subscribe_events", "event_type": "state_changed"}')
 }
 
-_token_doing = false
 _retry_count = 0
 function onClose() {
-	if (_token_doing < 0) { // Skip auth invalid
-		console.log('连接关闭，刷新令牌中')
+	if (_ignore_error) { // Skip auth invalid
+		console.log('连接关闭，忽略错误')
 		return
 	}
-	var timeout = Math.min(Math.pow(4, ++_retry_count), 3600)
-	var delay = (timeout > 60) ? (Math.ceil(timeout / 60) + ' 分钟') : (timeout + ' 秒')
+	var seconds = Math.min(Math.pow(4, ++_retry_count), 3600)
+	var delay = (seconds > 60) ? (Math.ceil(seconds / 60) + ' 分钟') : (seconds + ' 秒')
 	var text = '连接关闭，' + delay + '后'
-	setTimeout('connect("第' + _retry_count + '次重连")', timeout * 1000)
+	reconnect('第' + _retry_count + '次重连', seconds)
 	if (_retry_count > 1) { // Skip first
 		error(text)
 	} else {
@@ -121,11 +135,8 @@ function onResult(message, data) {
 		// Responed to subscribe_events
 	} else if (data.id == _wsid && _call_eid) {
 		// Avoid mis-operation and ensure animation
-		setTimeout(function () {
-			// Responed to call_service
-			document.getElementById(_call_eid).style = ''
-			_call_eid = null
-		}, 1000)
+		// Responed to call_service
+		setTimeout("document.getElementById(_call_eid).style = ''; _call_eid = null", 1000)
 	}
 }
 
@@ -147,11 +158,11 @@ function onEvent(message, data) {
 }
 
 function onInvalid() {
-	if (_token_doing)
+	if (_ignore_error)
 		return
 
 	_token = null
-	_token_doing = true
+	_ignore_error = true
 	try {
 		var tokens = JSON.parse(localStorage.hassTokens)
 		getAuthToken('刷新令牌', 'refresh_token', 'refresh_token=' + tokens.refresh_token, tokens)
@@ -169,7 +180,7 @@ function handleAuth(code) {
 		var client_id = location.protocol + '//' + location.host + '/'
 		var url = '/auth/authorize?client_id=' + encodeURIComponent(client_id) + '&redirect_uri=' + encodeURIComponent(location.href)
 		floater('error', '无登录令牌。2 秒后转到<a href="' + url + '">登录页面</a>')
-		setTimeout(function () { location = url }, 2000)
+		setTimeout("location = url", 2000)
 	}
 }
 
@@ -192,12 +203,12 @@ function getAuthToken(reason, grant_type, param, tokens, callback) {
 				}
 				_token = tokens.access_token
 				localStorage.hassTokens = JSON.stringify(tokens)
-				setTimeout('connect("令牌重连")', 200)
+				reconnect('令牌重连', 0.2)
 				console.log('获取令牌成功：' + _token)
 			} else {
 				showAuthError('获取令牌失败')
 			}
-			_token_doing = false
+			_ignore_error = false
 		}
 	}
 	xhr.responseType = 'json'
@@ -293,10 +304,7 @@ function updateGrid(entity) {
 	} else if (isValidEntity(entity)) {
 		if (_refresh_timer)
 			clearTimeout(_refresh_timer)
-		_refresh_timer = setTimeout(function () {
-			_refresh_timer = null
-			connect('发现重连')
-		}, 1000 * 60)
+		_refresh_timer = setTimeout("_refresh_timer = null; reconnect('发现重连')", 1000 * 60)
 		error('发现“' + entity.attributes.friendly_name + '”，1 分钟后')
 	} else {
 		console.log('忽略事件：' + entity_id)
@@ -784,5 +792,5 @@ function floater(type, text) {
 }
 
 function error(text) {
-	floater('error', text + '<a href="javascript:connect(\'重新连接\')">重新连接</a>')
+	floater('error', text + '<a href="javascript:reconnect(\'重新连接\')">重新连接</a>')
 }
