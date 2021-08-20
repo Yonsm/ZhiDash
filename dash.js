@@ -64,7 +64,8 @@ function reconnect(reason, seconds) {
 
 	if (_ws) {
 		console.log('关闭旧连接')
-		_ws.close()
+		if (_ws.readyState == WebSocket.OPEN)
+			_ws.close()
 		delete _ws
 		_ws = null
 	}
