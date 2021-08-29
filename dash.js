@@ -303,10 +303,12 @@ function updateGrid(entity) {
 				updateGrid(relation)
 		}
 	} else if (isValidEntity(entity)) {
-		if (_refresh_timer)
-			clearTimeout(_refresh_timer)
-		_refresh_timer = setTimeout("_refresh_timer = null; reconnect('发现重连')", 1000 * 60)
-		error('发现“' + entity.attributes.friendly_name + '”，1 分钟后')
+		if (_refresh_timer) {
+			console.log('忽略发现：' + entity_id)
+		} else {
+			_refresh_timer = setTimeout("_refresh_timer = null; reconnect('发现重连')", 1000 * 60)
+			error('发现“' + entity.attributes.friendly_name + '”，1 分钟后')
+		}
 	} else {
 		console.log('忽略事件：' + entity_id)
 	}
