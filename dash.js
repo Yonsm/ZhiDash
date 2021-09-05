@@ -181,7 +181,7 @@ function handleAuth(code) {
 		var client_id = location.protocol + '//' + location.host + '/'
 		var url = '/auth/authorize?client_id=' + encodeURIComponent(client_id) + '&redirect_uri=' + encodeURIComponent(location.href)
 		floater('error', '无登录令牌。2 秒后转到<a href="' + url + '">登录页面</a>')
-		setTimeout("location = url", 2000)
+		setTimeout("location = '" + url + "'", 2000)
 	}
 }
 
