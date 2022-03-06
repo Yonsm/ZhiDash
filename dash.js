@@ -411,35 +411,44 @@ _CLICKABLE_DOMAINS = ['light', 'switch', 'media_player', 'cover', 'vacuum', 'fan
 
 _TRANS = {
 	None: '无',
-	unknown: '未知',
-	unavailable: '不可用',
+	'unknown': '未知',
+	'unavailable': '不可用',
 
-	off: '关闭',
-	on: '开启',
+	'off': '关闭',
+	'on': '开启',
 
-	idle: '空闲',
-	auto: '自动',
-	low: '低速',
-	medium: '中速',
-	middle: '中速',
-	high: '高速',
-	favorite: '最爱',
+	'idle': '空闲',
+	'auto': '自动',
+	'low': '低速',
+	'medium': '中速',
+	'middle': '中速',
+	'high': '高速',
+	'favorite': '最爱',
 
-	strong: '高速',
-	silent: '静音',
-	interval: '间歇',
+	'strong': '高速',
+	'silent': '静音',
+	'interval': '间歇',
 
-	cool: '制冷',
-	heat: '制热',
-	dry: '除湿',
-	fan: '送风',
-	fan_only: '送风',
+	'cool': '制冷',
+	'auto': '自动',
+	'heat': '制热',
+	'dry': '除湿',
+	'fan': '送风',
+	'fan_only': '送风',
 
-	Error: '错误',
-	Paused: '暂停',
-	Cleaning: '清扫中',
-	Charging: '充电中',
+	'Error': '错误',
+	'Paused': '暂停',
+	'Cleaning': '清扫中',
+	'Charging': '充电中',
 	'Charger disconnected': '充电断开',
+
+	'home': '在家',
+	'not_home': '离家',
+
+	'open': '打开',
+	'opening': '正在打开',
+	'closed': '闭合',
+	'closing': '正在闭合',
 }
 
 _BINARY_SENSOR_ICONS = {
