@@ -356,7 +356,7 @@ function onTune(event) {
 	} else if (title == '◌' || title == '◉') {
 		doService('oscillate', { entity_id: grid.id, oscillating: title == '◉' ? false : true }, tuner)
 	} else {
-		doService('set_direction', { entity_id: grid.id, direction: title == '⭇' ? 'reverse' : 'forward' }, tuner)
+		doService('set_direction', { entity_id: grid.id, direction: title == '⇥' ? 'reverse' : 'forward' }, tuner)
 	}
 }
 
@@ -614,7 +614,7 @@ function makeEntity(entity) {
 			if (attributes.preset_modes && attributes.preset_modes.length > 0)
 				extra += makeSelect(attributes.preset_modes, attributes.preset_mode)
 			if (attributes.hasOwnProperty('direction'))
-				extra += '<span class="tuner" onclick="onTune(event)">' + (attributes.direction == 'reverse' ? '⭋' : '⭇') + '</span>'
+				extra += '<span class="tuner" onclick="onTune(event)">' + (attributes.direction == 'reverse' ? '⇤' : '⇥') + '</span>'
 		}
 		if (extra) {
 			html += '<div class="extra' + off + '">' + extra + '</div>'
