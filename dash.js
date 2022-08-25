@@ -11,8 +11,12 @@ function load() {
 	var count = Math.floor(cwidth / 124)
 	var width = (cwidth - count * 4) / count
 	width = Math.floor(width * 10) / 10
-	document.styleSheets[1].cssRules[0].style.width = width + 'px'
-	document.styleSheets[1].cssRules[1].style.width = Math.ceil(width * 1.5 + 1) + 'px'
+	try {
+		document.styleSheets[1].cssRules[0].style.width = width + 'px'
+		document.styleSheets[1].cssRules[1].style.width = Math.ceil(width * 1.5 + 1) + 'px'
+	} catch(err) {
+		console.log(err.message)
+	}
 
 	// Parse params
 	var args = urlArgs()
@@ -342,10 +346,18 @@ function onTune(event) {
 	var tuner = event.target
 	var extra = tuner.parentElement
 	var grid = extra.parentElement
-	var moder = extra.children[1]
-	var text = moder.options[moder.selectedIndex].innerText
-	var temperature = parseInt(text.split(' ')[1]) + (tuner.innerText == '△' ? 1 : -1)
-	doService('set_temperature', { entity_id: grid.id, temperature: temperature }, tuner)
+	var title = tuner.innerText
+
+	if (title == '△' || title == '▽') {
+		var moder = extra.children[1]
+		var text = moder.options[moder.selectedIndex].innerText
+		var temperature = parseInt(text.split(' ')[1]) + (title == '△' ? 1 : -1)
+		doService('set_temperature', { entity_id: grid.id, temperature: temperature }, tuner)
+	} else if (title == '◌' || title == '◉') {
+		doService('oscillate', { entity_id: grid.id, oscillating: title == '◉' ? false : true }, tuner)
+	} else {
+		doService('set_direction', { entity_id: grid.id, direction: title == '⭇' ? 'reverse' : 'forward' }, tuner)
+	}
 }
 
 function onMode(moder) {
@@ -586,7 +598,7 @@ function makeEntity(entity) {
 			dash_extra_forced = attributes.attribution
 	}
 	if (!off || dash_extra_forced) {
-		var extra = null
+		var extra = ''
 		var dash_extra = typeof (dash_extra_forced) == 'string' ? dash_extra_forced : attributes.dash_extra
 		if (dash_extra) {
 			extra = renderTemplate(dash_extra, state, attributes, true)
@@ -596,8 +608,13 @@ function makeEntity(entity) {
 				extra = '<span class="tuner" onclick=\'event.stopPropagation(); ' + makeClick(attributes.dash_extra_click) + "'>" + extra + '</span>'
 		} else if (domain == 'climate' && attributes.hvac_modes) {
 			extra = '<span class="tuner" onclick="onTune(event)">▽</span>' + makeSelect(attributes.hvac_modes, state, attributes.temperature) + '<span class="tuner" onclick="onTune(event)">△</span>'
-		} else if (domain == 'fan' && attributes.preset_modes && attributes.preset_modes.length > 0) {
-			extra = makeSelect(attributes.preset_modes, attributes.preset_mode)
+		} else if (domain == 'fan') {
+			if (attributes.hasOwnProperty('oscillating'))
+				extra += '<span class="tuner" onclick="onTune(event)">' + (attributes.oscillating ? '◉' : '◌') + '</span>'
+			if (attributes.preset_modes && attributes.preset_modes.length > 0)
+				extra += makeSelect(attributes.preset_modes, attributes.preset_mode)
+			if (attributes.hasOwnProperty('direction'))
+				extra += '<span class="tuner" onclick="onTune(event)">' + (attributes.direction == 'reverse' ? '⭋' : '⭇') + '</span>'
 		}
 		if (extra) {
 			html += '<div class="extra' + off + '">' + extra + '</div>'
