@@ -283,12 +283,12 @@ function reloadContent() {
 	html += makeUtility("location.reload(true)", 'reload', '刷新')
 	if (self == top) {
 		html += makeUtility("location = '/'", 'home-assistant', '概览')
-		html += makeUtility("location = '/config/server_control'", 'server', '服务')
+		html += makeUtility("location = '/developer-tools/yaml'", 'cog-refresh', '配置')
+		html += makeUtility("location = '/developer-tools/state'", 'pencil', '状态')
+		html += makeUtility("location = '/developer-tools/service'", 'hammer', '服务')
 		html += makeUtility("location = '/config/integrations'", 'puzzle', '集成')
-		html += makeUtility("location = '/config/logs'", 'math-log', '日志')
 		html += makeUtility("location = '/config/automation/dashboard'", 'robot', '自动化')
-		html += makeUtility("location = '/config/customize'", 'pencil', '自定义')
-		html += makeUtility("location = '/developer-tools'", 'hammer', '开发者')
+		html += makeUtility("location = '/config/logs'", 'math-log', '日志')
 	}
 
 	floater()
