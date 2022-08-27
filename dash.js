@@ -14,7 +14,7 @@ function load() {
 	try {
 		document.styleSheets[1].cssRules[0].style.width = width + 'px'
 		document.styleSheets[1].cssRules[1].style.width = Math.ceil(width * 1.5 + 1) + 'px'
-	} catch(err) {
+	} catch (err) {
 		console.log(err.message)
 	}
 
@@ -714,7 +714,7 @@ function renderTemplate(template, state, attributes, trans) {
 
 var _sorted_domains = Object.keys(_DOMAIN_ICONS)
 var _sorted_classes = ['opening', 'motion', 'window', 'illuminance']
-var _sorted_units = ['μg/m³', 'ppm', '°C', '%', 'mg/m³', 'lm']
+var _sorted_units = ['µg/m³', 'ppm', '°C', '%', 'mg/m³', 'lm']
 var _sorted_names = '爸妈爷奶大小外阿入玄客餐厨过洗走主浴衣次儿书阳'
 function sortedCompare(sorted_items, item1, item2) {
 	index1 = sorted_items.indexOf(item1) >>> 0
