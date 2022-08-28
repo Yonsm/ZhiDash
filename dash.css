@@ -186,6 +186,10 @@ body {
 	animation: loading 2s infinite linear;
 }
 
+.tuning {
+	animation: tuning 1s infinite alternate;
+}
+
 #error {
 	width: 300px;
 	height: 32px;

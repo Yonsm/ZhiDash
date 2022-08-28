@@ -141,7 +141,7 @@ function onResult(message, data) {
 	} else if (data.id == _wsid && _call_eid) {
 		// Avoid mis-operation and ensure animation
 		// Responed to call_service
-		setTimeout("document.getElementById(_call_eid).style = ''; _call_eid = null", 1000)
+		setTimeout("var el = document.getElementById(_call_eid); var name = el.className; if (name.endsWith(' tuning')) el.className = name.slice(0, -7); _call_eid = null", 1000)
 	}
 }
 
@@ -319,9 +319,10 @@ function updateGrid(entity) {
 }
 
 function onClick(grid) {
-	var off = grid.children[1].className.startsWith('state off')
+	var element = grid.children[1]
+	var off = element.className.startsWith('state off')
 	if (grid.className == 'entity cover') {
-		var service = off ? 'close_cover' : 'open_cover'
+		var service = element.children[0].className.endsWith('tuning') ? 'stop_cover' : (off ? 'close_cover' : 'open_cover')
 	} else if (grid.className == 'entity vacuum') {
 		var service = off ? 'start' : 'return_to_base'
 	} else if (grid.className == 'entity group') {
@@ -377,7 +378,7 @@ function doService(service, data, element) {
 		return
 	}
 	_call_eid = entity_id
-	element.style = 'animation: tuning 1s infinite alternate'
+	element.className += ' tuning'
 	//console.log('调用服务：' + service + '/' + entity_id)
 	callService(entity_id.split('.')[0], service, data)
 }
@@ -585,8 +586,11 @@ function makeEntity(entity) {
 			icon = _DOMAIN_ICONS[domain]
 		}
 
-		if (icon)
+		if (icon) {
+			if (state == 'opening' || state == 'closing')
+				icon += ' tuning'
 			html += '<i class="mdi mdi-' + icon + '"></i>'
+		}
 	}
 	html += '</div>'
 
