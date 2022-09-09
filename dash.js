@@ -650,7 +650,7 @@ function makeSelect(mode_list, selected, extra) {
 	for (var i in mode_list) {
 		var mode = mode_list[i]
 		var key = mode.toLowerCase()
-		var text = _TRANS[key] || mode.replace(/level/gi, '档位')
+		var text = _TRANS[key] || mode.replace(/level/gi, '档')
 		html += '<option value="' + mode + '"' + (mode == selected ? ' selected' : '') + '>' + text
 		if (mode == selected && extra) {
 			html += ' ' + extra
