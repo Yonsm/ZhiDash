@@ -349,15 +349,23 @@ function onTune(event) {
 	var grid = extra.parentElement
 	var title = tuner.innerText
 
-	if (title == '△' || title == '▽') {
+	if (title == '◌' || title == '◉') {
+		doService('oscillate', { entity_id: grid.id, oscillating: title == '◉' ? false : true }, tuner)
+	} else if (title == '⇤' || title == '⇥') {
+		doService('set_direction', { entity_id: grid.id, direction: title == '⇥' ? 'reverse' : 'forward' }, tuner)
+	} else {
 		var moder = extra.children[1]
 		var text = moder.options[moder.selectedIndex].innerText
-		var temperature = parseInt(text.split(' ')[1]) + (title == '△' ? 1 : -1)
-		doService('set_temperature', { entity_id: grid.id, temperature: temperature }, tuner)
-	} else if (title == '◌' || title == '◉') {
-		doService('oscillate', { entity_id: grid.id, oscillating: title == '◉' ? false : true }, tuner)
-	} else {
-		doService('set_direction', { entity_id: grid.id, direction: title == '⇥' ? 'reverse' : 'forward' }, tuner)
+		var value = parseInt(text.split(' ')[1])
+		if (title == '△' || title == '▽') {
+			value += title == '△' ? 1 : -1
+			doService('set_temperature', { entity_id: grid.id, temperature: value }, tuner)
+		} else if (title == '⇠' || title == '⇢') {
+			value += title == '⇢' ? 10 : -10
+			if (value < 0) value = 0
+			else if (value > 100) value = 100
+			doService('set_percentage', { entity_id: grid.id, percentage: value }, tuner)
+		}
 	}
 }
 
@@ -530,19 +538,19 @@ function makeEntity(entity) {
 	var entity_id = entity.entity_id
 	var domain = entity_id.split('.')[0]
 	var state = entity.state
-	var attributes = entity.attributes
+	var attrs = entity.attributes
 
-	var name = attributes.hasOwnProperty('dash_name') ? renderTemplate(attributes.dash_name, state, attributes, true) : attributes.friendly_name
+	var name = attrs.hasOwnProperty('dash_name') ? renderTemplate(attrs.dash_name, state, attrs, true) : attrs.friendly_name
 	var html = '<div class="name">' + name + '</div>'
 
 	var na = state == '' || state == 'unavailable' || state == 'unknown' || state == 'None'
 	var off = na || state == 'off' || state == 'not_home' || state == 'open' || state == 'opening' || state == 'docked' || state == 'idle' ? ' off' : ''
 
-	var has_dash_icon = attributes.hasOwnProperty('dash_icon')
+	var has_dash_icon = attrs.hasOwnProperty('dash_icon')
 	if ((!has_dash_icon && (domain == 'sensor' || domain == 'climate')) || na) {
-		var value = !na && domain == 'climate' ? attributes.current_temperature : _TRANS[state] || state || '无'
+		var value = !na && domain == 'climate' ? attrs.current_temperature : _TRANS[state] || state || '无'
 		var nan = isNaN(value)
-		var type = domain == 'climate' ? 'temperature' : attributes.device_class
+		var type = domain == 'climate' ? 'temperature' : attrs.device_class
 		var overflow = nan ? '' : sensorOverflow(type, value)
 		html += '<div class="state' + off + overflow + (nan ? ' nan' : '') + '">'
 		if (nan) {
@@ -554,7 +562,7 @@ function makeEntity(entity) {
 		}
 
 		if (!off) {
-			var unit = attributes.hasOwnProperty('dash_unit') ? renderTemplate(attributes.dash_unit, state, attributes) : attributes.unit_of_measurement
+			var unit = attrs.hasOwnProperty('dash_unit') ? renderTemplate(attrs.dash_unit, state, attrs) : attrs.unit_of_measurement
 			if (unit)
 				html += '<span class="unit">' + unit + '</span>'
 		}
@@ -562,11 +570,11 @@ function makeEntity(entity) {
 		html += '<div class="state' + off + '">'
 
 		if (has_dash_icon) {
-			var icon = renderTemplate(attributes.dash_icon, state, attributes)
+			var icon = renderTemplate(attrs.dash_icon, state, attrs)
 			if (icon == '' || icon == 'unavailable' || icon == 'unknown' || icon == 'None')
-				icon = attributes.icon
+				icon = attrs.icon
 		} else {
-			var icon = attributes.icon
+			var icon = attrs.icon
 		}
 		if (icon) {
 			if (icon.startsWith('mdi:')) {
@@ -576,7 +584,7 @@ function makeEntity(entity) {
 				icon = null
 			}
 		} else if (domain == 'binary_sensor') {
-			var device_class = attributes.device_class
+			var device_class = attrs.device_class
 			if (!_BINARY_SENSOR_ICONS.hasOwnProperty(device_class))
 				device_class = 'default'
 			icon = _BINARY_SENSOR_ICONS[device_class][off ? 0 : 1]
@@ -594,31 +602,40 @@ function makeEntity(entity) {
 	}
 	html += '</div>'
 
-	var dash_extra_forced = attributes.dash_extra_forced
+	var dash_extra_forced = attrs.dash_extra_forced
 	if (!dash_extra_forced) {
 		if (domain == 'vacuum')
-			dash_extra_forced = attributes.status
+			dash_extra_forced = attrs.status
 		else if (domain == 'weather')
-			dash_extra_forced = attributes.attribution
+			dash_extra_forced = attrs.attribution
 	}
 	if (!off || dash_extra_forced) {
 		var extra = ''
-		var dash_extra = typeof (dash_extra_forced) == 'string' ? dash_extra_forced : attributes.dash_extra
+		var dash_extra = typeof (dash_extra_forced) == 'string' ? dash_extra_forced : attrs.dash_extra
 		if (dash_extra) {
-			extra = renderTemplate(dash_extra, state, attributes, true)
+			extra = renderTemplate(dash_extra, state, attrs, true)
 			if (extra.length > 8)
 				extra = '<marquee scrollamount="3">' + extra + '</marquee>'
-			if (attributes.hasOwnProperty('dash_extra_click'))
-				extra = '<span class="tuner" onclick=\'event.stopPropagation(); ' + makeClick(attributes.dash_extra_click) + "'>" + extra + '</span>'
-		} else if (domain == 'climate' && attributes.hvac_modes) {
-			extra = '<span class="tuner" onclick="onTune(event)">▽</span>' + makeSelect(attributes.hvac_modes, state, attributes.temperature) + '<span class="tuner" onclick="onTune(event)">△</span>'
+			if (attrs.hasOwnProperty('dash_extra_click'))
+				extra = '<span class="tuner" onclick=\'event.stopPropagation(); ' + makeClick(attrs.dash_extra_click) + "'>" + extra + '</span>'
+		} else if (domain == 'climate' && attrs.hvac_modes) {
+			extra = '<span class="tuner" onclick="onTune(event)">▽</span>' + makeSelect(attrs.hvac_modes, state, attrs.temperature) + '<span class="tuner" onclick="onTune(event)">△</span>'
 		} else if (domain == 'fan') {
-			if (attributes.hasOwnProperty('oscillating'))
-				extra += '<span class="tuner" onclick="onTune(event)">' + (attributes.oscillating ? '◉' : '◌') + '</span>'
-			if (attributes.preset_modes && attributes.preset_modes.length > 0)
-				extra += makeSelect(attributes.preset_modes, attributes.preset_mode)
-			if (attributes.hasOwnProperty('direction'))
-				extra += '<span class="tuner" onclick="onTune(event)">' + (attributes.direction == 'reverse' ? '⇤' : '⇥') + '</span>'
+			var has_osc = attrs.hasOwnProperty('oscillating')
+			var has_dir = attrs.hasOwnProperty('direction')
+			var has_speed = attrs.hasOwnProperty('percentage') && !has_osc && !has_dir
+			if (has_osc)
+				extra += '<span class="tuner" onclick="onTune(event)">' + (attrs.oscillating ? '◉' : '◌') + '</span>'
+			if (has_speed)
+				extra += '<span class="tuner" onclick="onTune(event)">⇠</span>'
+			if (attrs.preset_modes && attrs.preset_modes.length > 0)
+				extra += makeSelect(attrs.preset_modes, attrs.preset_mode, attrs.percentage)
+			else if (has_speed)
+				extra += attrs.percentage
+			if (has_speed)
+				extra += '<span class="tuner" onclick="onTune(event)">⇢</span>'
+			if (has_dir)
+				extra += '<span class="tuner" onclick="onTune(event)">' + (attrs.direction == 'reverse' ? '⇤' : '⇥') + '</span>'
 		}
 		if (extra) {
 			html += '<div class="extra' + off + '">' + extra + '</div>'
@@ -628,15 +645,15 @@ function makeEntity(entity) {
 	return html
 }
 
-function makeSelect(mode_list, selected, temperature) {
+function makeSelect(mode_list, selected, extra) {
 	html = '<select class="moder" onclick="event.stopPropagation()" onchange="onMode(this)">'
 	for (var i in mode_list) {
 		var mode = mode_list[i]
 		var key = mode.toLowerCase()
 		var text = _TRANS[key] || mode.replace(/level/gi, '档位')
 		html += '<option value="' + mode + '"' + (mode == selected ? ' selected' : '') + '>' + text
-		if (mode == selected && temperature) {
-			html += ' ' + temperature
+		if (mode == selected && extra) {
+			html += ' ' + extra
 		}
 		html += '</option>'
 	}
@@ -679,9 +696,9 @@ function makeClick(click) {
 	return 'location="' + click + '"'
 }
 
-function renderTemplate(template, state, attributes, trans) {
-	if (attributes.hasOwnProperty(template))
-		return attributes[template]
+function renderTemplate(template, state, attrs, trans) {
+	if (attrs.hasOwnProperty(template))
+		return attrs[template]
 
 	var result = ''
 	for (var end = 0; true; end++) {
@@ -694,10 +711,10 @@ function renderTemplate(template, state, attributes, trans) {
 				var parts = macro.split('.')
 				var count = parts.length
 				if (count == 1) {
-					result += macro == 'state' ? state : attributes.hasOwnProperty(macro) ? attributes[macro] : '无属性'
+					result += macro == 'state' ? state : attrs.hasOwnProperty(macro) ? attrs[macro] : '无属性'
 				} else {
 					var entity = findEntity(parts[0] + '.' + parts[1])
-					result += entity ? (count == 2 ? entity.state : attributes.hasOwnProperty(parts[2]) ? attributes[parts[2]] : '无属性') : '无设备'
+					result += entity ? (count == 2 ? entity.state : attrs.hasOwnProperty(parts[2]) ? attrs[parts[2]] : '无属性') : '无设备'
 				}
 				continue
 			}
@@ -735,12 +752,12 @@ function compareEntity(entity1, entity2) {
 	var ret = sortedCompare(_sorted_domains, domain1, domain2)
 	if (ret) return ret
 
-	var attributes1 = entity1.attributes
-	var attributes2 = entity2.attributes
+	var attrs1 = entity1.attributes
+	var attrs2 = entity2.attributes
 
 	// Sort by dash_order
-	var order1 = attributes1.dash_order
-	var order2 = attributes2.dash_order
+	var order1 = attrs1.dash_order
+	var order2 = attrs2.dash_order
 	if (order1)
 		return order2 ? parseInt(order1) - parseInt(order2) : -1
 	else if (order2)
@@ -748,8 +765,8 @@ function compareEntity(entity1, entity2) {
 
 	if (domain1 == 'sensor') {
 		// Sort by unit_of_measurement
-		var unit1 = attributes1.unit_of_measurement
-		var unit2 = attributes2.unit_of_measurement
+		var unit1 = attrs1.unit_of_measurement
+		var unit2 = attrs2.unit_of_measurement
 		ret = sortedCompare(_sorted_units, unit1, unit2)
 		if (ret) return ret
 
@@ -757,7 +774,7 @@ function compareEntity(entity1, entity2) {
 		if (ret) return ret
 	} else if (domain1 == 'binary_sensor') {
 		// Sort by device_class
-		ret = sortedCompare(_sorted_classes, attributes1.device_class, attributes2.device_class)
+		ret = sortedCompare(_sorted_classes, attrs1.device_class, attrs2.device_class)
 		if (ret) return ret
 	}
 
@@ -768,16 +785,16 @@ function compareEntity(entity1, entity2) {
 	}
 
 	// Sort by icon
-	if (attributes1.icon) {
-		ret = attributes1.icon.localeCompare(attributes2.icon)
+	if (attrs1.icon) {
+		ret = attrs1.icon.localeCompare(attrs2.icon)
 		if (ret) return ret
-	} else if (attributes2.icon) {
+	} else if (attrs2.icon) {
 		return -1
 	}
 
 	// Sort by prefix
-	name1 = attributes1.friendly_name
-	name2 = attributes2.friendly_name
+	name1 = attrs1.friendly_name
+	name2 = attrs2.friendly_name
 	ret = sortedCompare(_sorted_names, name1[0], name2[0])
 	if (ret) return ret
 
