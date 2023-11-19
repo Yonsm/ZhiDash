@@ -604,8 +604,8 @@ function makeEntity(entity) {
 
 	var dash_extra_forced = attrs.dash_extra_forced
 	if (!dash_extra_forced) {
-		if (domain == 'vacuum')
-			dash_extra_forced = attrs.status
+		if (domain == 'vacuum' && state != 'docked')
+			dash_extra_forced = state
 		else if (domain == 'weather')
 			dash_extra_forced = attrs.attribution
 	}
