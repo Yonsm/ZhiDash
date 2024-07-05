@@ -690,7 +690,7 @@ function makeClick(click) {
 		if (self != top)
 			return 'window.open("' + click + '")'
 	}
-	else if (!click.substring(0, 20).includes('://')) {
+	else if (!click.substring(0, 50).includes('://')) {
 		return click
 	}
 	return 'location="' + click + '"'
